@@ -23,24 +23,29 @@ type MqttConfig struct {
 	KeyFile  string
 }
 
+type MqttClient struct {
+	client mqtt.Client
+}
+
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
+	log.Printf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
 }
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
-	fmt.Println("Connected")
+	log.Println("Connected")
 }
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
-	fmt.Printf("Connect lost: %v", err)
+	log.Printf("Connect lost: %v", err)
 }
 
-func (m *MqttConfig) NewMqttConnection() (mqtt.Client, error) {
+func (m *MqttConfig) NewMqttConnection() (*MqttClient, error) {
 	c, err := initMqttClient(m)
+	mc := MqttClient{client: c}
 	if err != nil {
 		return nil, err
 	} else {
-		return c, nil
+		return &mc, nil
 	}
 }
 
@@ -69,10 +74,10 @@ func initMqttClient(m *MqttConfig) (mqtt.Client, error) {
 	return client, nil
 }
 
-func PublishMsg(client mqtt.Client, topic string, msg string) {
-	token := client.Publish(topic, 0, false, msg)
+func (c MqttClient) Publish(topic string, msg string) {
+	token := c.client.Publish(topic, 0, false, msg)
 	token.Wait()
-	time.Sleep(time.Second)
+	time.Sleep(time.Millisecond * 200)
 }
 
 func NewTlsConfig(m *MqttConfig) *tls.Config {
