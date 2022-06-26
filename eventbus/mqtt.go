@@ -24,7 +24,8 @@ type MqttConfig struct {
 }
 
 type MqttClient struct {
-	client mqtt.Client
+	client     mqtt.Client
+	recChannel chan string
 }
 
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
@@ -39,6 +40,8 @@ var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err
 	log.Printf("Connect lost: %v", err)
 }
 
+type SubscribeCallback func(t string, p string)
+
 func (m *MqttConfig) NewMqttConnection() (*MqttClient, error) {
 	c, err := initMqttClient(m)
 	mc := MqttClient{client: c}
@@ -50,7 +53,6 @@ func (m *MqttConfig) NewMqttConnection() (*MqttClient, error) {
 }
 
 func initMqttClient(m *MqttConfig) (mqtt.Client, error) {
-	//Start MQTT Connection
 	var broker = m.Host
 	var port = m.Port
 	opts := mqtt.NewClientOptions()
@@ -59,7 +61,7 @@ func initMqttClient(m *MqttConfig) (mqtt.Client, error) {
 	opts.SetUsername(m.Username)
 	opts.SetPassword(m.Password)
 	if m.UseTls {
-		tlsConfig := NewTlsConfig(m)
+		tlsConfig := newTlsConfig(m)
 		opts.SetTLSConfig(tlsConfig)
 	}
 	opts.SetDefaultPublishHandler(messagePubHandler)
@@ -80,7 +82,27 @@ func (c MqttClient) Publish(topic string, msg string) {
 	time.Sleep(time.Millisecond * 200)
 }
 
-func NewTlsConfig(m *MqttConfig) *tls.Config {
+func (c MqttClient) Subscribe(topic string, extCallback SubscribeCallback) {
+	var callback mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+		v := msg.Payload()
+		p := string(v)
+		t := msg.Topic()
+
+		extCallback(t, p)
+	}
+
+	go subscribeAndListen(c, topic, callback)
+}
+
+func subscribeAndListen(c MqttClient, topic string, callback mqtt.MessageHandler) {
+	token := c.client.Subscribe(topic, 1, callback)
+	for {
+		token.Wait()
+		time.Sleep(time.Second * 1)
+	}
+}
+
+func newTlsConfig(m *MqttConfig) *tls.Config {
 	certpool := x509.NewCertPool()
 	ca, err := ioutil.ReadFile(m.CaFile)
 	if err != nil {
