@@ -40,6 +40,8 @@ func main() {
 		log.Panic(err)
 	}
 	mc.Publish("test/bla", "moinmoin")
+
+    //Subscribe:
 }
 
 ```
