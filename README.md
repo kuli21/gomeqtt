@@ -39,9 +39,20 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
+	defer mc.Close()
+
 	mc.Publish("test/bla", "moinmoin")
 
-    //Subscribe:
+    var f mqtt.SubscribeCallback = func(topic string, payload string) {
+		fmt.Println("callback: recieved message from:", topic, ":", payload)
+	}
+	mc.Subscribe("test/bla", f)
+
+	for i := 1; i < 20; i++ {
+		time.Sleep(time.Second * 1)
+		o := fmt.Sprintf("%d", i)
+		mc.Publish("test/bla", "loop-no: " + o)
+	}
 }
 
 ```

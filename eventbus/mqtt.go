@@ -29,18 +29,18 @@ type MqttClient struct {
 }
 
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	log.Printf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
+	log.Printf("received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
 }
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
-	log.Println("Connected")
+	log.Println("connected to mqtt")
 }
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
-	log.Printf("Connect lost: %v", err)
+	log.Printf("connection to mqtt lost: %v", err)
 }
 
-type SubscribeCallback func(t string, p string)
+type SubscribeCallback func(topic string, payload string)
 
 func (m *MqttConfig) NewMqttConnection() (*MqttClient, error) {
 	c, err := initMqttClient(m)
@@ -56,7 +56,11 @@ func initMqttClient(m *MqttConfig) (mqtt.Client, error) {
 	var broker = m.Host
 	var port = m.Port
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker(fmt.Sprintf("ssl://%s:%d", broker, port))
+	if m.UseTls {
+		opts.AddBroker(fmt.Sprintf("ssl://%s:%d", broker, port))
+	} else {
+		opts.AddBroker(fmt.Sprintf("tcp://%s:%d", broker, port))
+	}
 	opts.SetClientID(m.ClientId)
 	opts.SetUsername(m.Username)
 	opts.SetPassword(m.Password)
@@ -76,6 +80,10 @@ func initMqttClient(m *MqttConfig) (mqtt.Client, error) {
 	return client, nil
 }
 
+func (c MqttClient) Close() {
+	c.client.Disconnect(250)
+}
+
 func (c MqttClient) Publish(topic string, msg string) {
 	token := c.client.Publish(topic, 0, false, msg)
 	token.Wait()
@@ -83,22 +91,21 @@ func (c MqttClient) Publish(topic string, msg string) {
 }
 
 func (c MqttClient) Subscribe(topic string, extCallback SubscribeCallback) {
+	log.Printf("Subscribed on topic %s", topic)
 	var callback mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 		v := msg.Payload()
 		p := string(v)
 		t := msg.Topic()
-
 		extCallback(t, p)
 	}
-
 	go subscribeAndListen(c, topic, callback)
 }
 
 func subscribeAndListen(c MqttClient, topic string, callback mqtt.MessageHandler) {
 	token := c.client.Subscribe(topic, 1, callback)
+	token.Wait()
 	for {
-		token.Wait()
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Microsecond * 500)
 	}
 }
 
