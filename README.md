@@ -6,7 +6,7 @@ I didn't always wanted to setup everything from scratch.
 
 # Todos
 - qos settings
-- consume messages
+- Unsubscribe feature
 
 
 # Examples
