@@ -24,17 +24,18 @@ import (
 
 func main() {
 	fmt.Println("test mqtt lib")
-	c := mqtt.MqttConfig{
-		Host:     "blubb.de",
-		Port:     8883,
-		ClientId: "test-go-12345",
-		Username: "user1",
-		Password: "pass1",
-		UseTls:   true,
-		CaFile:   "./config/certs/blubb.de.ca.pem",
-		CrtFile:  "./config/certs/blubb.de.crt.pem",
-		KeyFile:  "./config/certs/blubb.de.key.pem",
+	conf := mqtt.MqttConfig{
+				Host:     "blubb.de",
+				Port:     8883,
+				ClientId: "test-go-12345",
+				Username: "user1",
+				Password: "pass1",
+				UseTls:   true,
+				CaFile:   "./config/certs/blubb.de.ca.pem",
+				CrtFile:  "./config/certs/blubb.de.crt.pem",
+				KeyFile:  "./config/certs/blubb.de.key.pem",
 	}
+	c := GetMqttConfig(conf)
 	mc, err := c.NewMqttConnection()
 	if err != nil {
 		log.Panic(err)

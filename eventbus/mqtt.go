@@ -23,6 +23,18 @@ type MqttConfig struct {
 	KeyFile  string
 }
 
+type mqttConfigInternal struct {
+	Host     string
+	Port     int
+	ClientId string
+	Username string
+	Password string
+	UseTls   bool
+	CaFile   string
+	CrtFile  string
+	KeyFile  string
+}
+
 type MqttClient struct {
 	client     mqtt.Client
 	recChannel chan string
@@ -42,7 +54,22 @@ var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err
 
 type SubscribeCallback func(topic string, payload string)
 
-func (m *MqttConfig) NewMqttConnection() (*MqttClient, error) {
+func GetMqttConfig(mc MqttConfig) mqttConfigInternal {
+	mint := mqttConfigInternal{
+		Host:     mc.Host,
+		Port:     mc.Port,
+		ClientId: mc.ClientId,
+		Username: mc.Username,
+		Password: mc.Password,
+		UseTls:   mc.UseTls,
+		CaFile:   mc.CaFile,
+		CrtFile:  mc.CrtFile,
+		KeyFile:  mc.KeyFile,
+	}
+	return mint
+}
+
+func (m *mqttConfigInternal) NewMqttConnection() (*MqttClient, error) {
 	c, err := initMqttClient(m)
 	mc := MqttClient{client: c}
 	if err != nil {
@@ -52,7 +79,7 @@ func (m *MqttConfig) NewMqttConnection() (*MqttClient, error) {
 	}
 }
 
-func initMqttClient(m *MqttConfig) (mqtt.Client, error) {
+func initMqttClient(m *mqttConfigInternal) (mqtt.Client, error) {
 	var broker = m.Host
 	var port = m.Port
 	opts := mqtt.NewClientOptions()
@@ -109,7 +136,7 @@ func subscribeAndListen(c MqttClient, topic string, callback mqtt.MessageHandler
 	}
 }
 
-func newTlsConfig(m *MqttConfig) *tls.Config {
+func newTlsConfig(m *mqttConfigInternal) *tls.Config {
 	certpool := x509.NewCertPool()
 	ca, err := ioutil.ReadFile(m.CaFile)
 	if err != nil {
