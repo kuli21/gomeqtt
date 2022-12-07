@@ -41,15 +41,16 @@ type MqttClient struct {
 }
 
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	log.Printf("received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
+	log.Printf("gomeqtt: received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
 }
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
-	log.Println("connected to mqtt")
+	log.Println("gomeqtt: connected to mqtt")
 }
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
-	log.Printf("connection to mqtt lost: %v", err)
+	log.Printf("gomeqtt: connection to mqtt lost: %v", err)
+	panic("gomeqtt: Panic due to connection loss!")
 }
 
 type SubscribeCallback func(topic string, payload string)
@@ -118,7 +119,7 @@ func (c MqttClient) Publish(topic string, msg string) {
 }
 
 func (c MqttClient) Subscribe(topic string, extCallback SubscribeCallback) {
-	log.Printf("Subscribed on topic %s", topic)
+	log.Printf("gomeqtt: subscribed on topic %s", topic)
 	var callback mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 		v := msg.Payload()
 		p := string(v)
